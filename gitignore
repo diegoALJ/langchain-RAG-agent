@@ -1,0 +1,58 @@
+# --- Python general ---
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- Entorno virtual ---
+.env
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# --- Logs, caches y archivos temporales ---
+*.log
+*.tmp
+*.temp
+.cache/
+*.sqlite3
+*.db
+
+# --- Archivos de configuración local ---
+.python-version
+.ipynb_checkpoints/
+.DS_Store
+
+# --- Pytest / cobertura de pruebas ---
+.coverage
+.tox/
+.nox/
+.pytest_cache/
+.hypothesis/
+htmlcov/
+
+# --- Salidas del proyecto ---
+/image_outputs/
+
+# --- IDEs y editores ---
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# --- Otros ---
+*.bak
+*.swp
+*.swo
+*~
+
+# --- Modelos y pesos de IA (por si acaso) ---
+*.pt
+*.pth
+*.onnx
+*.tflite
+*.h5
+*.pb
+*.weights
