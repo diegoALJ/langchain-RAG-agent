@@ -1,0 +1,93 @@
+from dotenv import load_dotenv
+
+load_dotenv()
+
+from langgraph.graph import START, StateGraph, MessagesState
+from langgraph.prebuilt import tools_condition
+from langgraph.prebuilt import ToolNode
+from langchain_core.messages import SystemMessage, HumanMessage
+from tools.search_tools import wiki_search, web_search, arxiv_search, vector_store, youtube_transcript, similar_question_search
+from tools.math_tools import multiply, add, subtract, divide, modulus,power,square_root,evaluate_expression,simplify_expression
+from tools.code_tools import execute_code_multilang
+from tools.doc_tools import save_and_read_file,download_file_from_url, extract_text_from_image, analyze_csv_file, analyze_excel_file, extract_text_from_pdf
+from tools.image_tools import analyze_image, transform_image, draw_on_image, generate_simple_image, combine_images
+from langchain_groq import ChatGroq
+from langchain_huggingface import ChatHuggingFace, HuggingFaceEndpoint
+
+
+with open("system_prompt.txt","r", encoding="utf-8") as f:
+    system_prompt=f.read()
+
+sys_msg=SystemMessage(content=system_prompt)
+
+tools=[
+    execute_code_multilang,
+    save_and_read_file,
+    download_file_from_url,
+    extract_text_from_image,
+    analyze_csv_file,
+    analyze_excel_file,
+    extract_text_from_pdf,
+    analyze_image,
+    transform_image,
+    draw_on_image,
+    generate_simple_image,
+    combine_images,
+    add,
+    subtract,
+    multiply,
+    divide,
+    modulus,
+    power,
+    square_root,
+    evaluate_expression,
+    simplify_expression,
+    wiki_search,
+    web_search,
+    youtube_transcript,
+    arxiv_search,
+    similar_question_search,
+    ]
+
+
+# Build graph function
+def build_graph():
+    """Build the graph"""
+    # Load environment variables from .env file
+    llm = ChatGroq(model="qwen-qwq-32b", temperature=0)
+
+    # Bind tools to LLM
+    llm_with_tools = llm.bind_tools(tools)
+
+    # Node
+    def assistant(state: MessagesState):
+        """Assistant node"""
+        return {"messages": [llm_with_tools.invoke(state["messages"])]}
+
+    def retriever(state: MessagesState):
+        """Retriever node"""
+        similar_question = vector_store.similarity_search(state["messages"][0].content)
+
+        if similar_question:  # Check if the list is not empty
+            example_msg = HumanMessage(
+                content=f"Here I provide a similar question and answer for reference: \n\n{similar_question[0].page_content}",
+            )
+            return {"messages": [sys_msg] + state["messages"] + [example_msg]}
+        else:
+            # Handle the case when no similar questions are found
+            return {"messages": [sys_msg] + state["messages"]}
+
+    builder = StateGraph(MessagesState)
+    builder.add_node("retriever", retriever)
+    builder.add_node("assistant", assistant)
+    builder.add_node("tools", ToolNode(tools))
+    builder.add_edge(START, "retriever")
+    builder.add_edge("retriever", "assistant")
+    builder.add_conditional_edges(
+        "assistant",
+        tools_condition,
+    )
+    builder.add_edge("tools", "assistant")
+
+    # Compile graph
+    return builder.compile()
